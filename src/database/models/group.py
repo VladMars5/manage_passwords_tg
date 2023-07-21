@@ -1,16 +1,16 @@
 from typing import Optional
 
-from sqlalchemy import Column, Integer, String, Table, Identity, ForeignKey
+from sqlalchemy import Column, String, Table, Identity, ForeignKey, BigInteger
 from database.database import metadata
 from pydantic import BaseModel, validator, root_validator
 
 group = Table(
     "group",
     metadata,
-    Column("id", Integer, Identity(), nullable=False, unique=True),
+    Column("id", BigInteger, Identity(), nullable=False, unique=True),
     Column("name", String(length=256), nullable=False, primary_key=True),
     Column("description", String(length=2048)),
-    Column("user_id", Integer, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, primary_key=True)
+    Column("user_id", BigInteger, ForeignKey('user.id', ondelete='CASCADE'), nullable=False, primary_key=True)
 )
 
 

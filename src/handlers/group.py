@@ -1,5 +1,4 @@
 from typing import Tuple, Union
-import asyncio
 
 from aiogram import Router
 from aiogram.filters import Text
@@ -10,26 +9,22 @@ from depends import inject, Depends
 from loguru import logger
 from asyncpg.exceptions import UniqueViolationError
 
-from keyboards.keyboards import create_dynamic_keyboard
+from keyboards.keyboards import create_dynamic_keyboard, main_menu
 from states.group import CreateGroup, UpdateGroup
 from utils import check_telegram_profile_message
 from database.models.group import Group, UpdateGroupModel
 from database.crud.group import insert_new_group, get_groups_by_user, delete_group_by_name, get_group_by_name,\
     update_group_by_name
+from filters import CheckBlockUserMiddleware
 
 router = Router()
+router.message.middleware(CheckBlockUserMiddleware())
 
 
-@router.callback_query(Text(text='create_new_group'))
-@inject
-async def press_button_create_group(message: CallbackQueryHandler, state: FSMContext,
-                                    user: Tuple[int, Union[str, None]] = Depends(check_telegram_profile_message)) \
-        -> None:
-    if user[1] is not None:
-        await message.message.answer(user[1])
-        return
+@router.message(Text(text='Создать новую группу'))
+async def press_button_create_group(message: Message, state: FSMContext) -> None:
     await state.set_state(CreateGroup.name)
-    await message.message.answer("Введите название группы", reply_markup=ReplyKeyboardMarkup(
+    await message.answer("Введите название группы", reply_markup=ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="Отмена")]],
             resize_keyboard=True,
         ),)
@@ -108,36 +103,24 @@ async def input_description_group(message: Message, state: FSMContext) -> None:
         await message.reply(answer, reply_markup=ReplyKeyboardRemove())
 
 
-@router.callback_query(Text(text='delete_group_passwords'))
-@inject
-async def button_delete_group(message: CallbackQueryHandler,
-                              user: Tuple[int, Union[str, None]] = Depends(check_telegram_profile_message)) -> None:
-    if user[1] is not None:
-        await message.message.answer(user[1])
-        return
-
-    groups_name = await get_groups_by_user(profile_id=user[0])
+@router.message(Text(text='delete_group_passwords'))
+async def button_delete_group(message: Message) -> None:
+    groups_name = await get_groups_by_user(profile_id=message.from_user.id)
     if not groups_name:
-        await message.message.answer('У вас пока что нет созданных групп. Сначала создайте группу!',
-                                     reply_markup=ReplyKeyboardRemove())
+        await message.answer('У вас пока что нет созданных групп. Сначала создайте группу!',
+                             reply_markup=main_menu)
         return
     # создание динамической клавиатуры и отправка отдельного сообщения с клавиатурой взамен предыдущего состояния
     groups_name = [(group_name, f'delete_group_{group_name}',) for group_name in groups_name]
     buttons = create_dynamic_keyboard(data_buttons=groups_name)
-    await message.message.edit_text('Выберите группу для удаления', reply_markup=buttons.as_markup())
+    await message.edit_text('Выберите группу для удаления', reply_markup=buttons.as_markup())
 
 
 @router.callback_query(Text(startswith="delete_group_"))
-@inject
-async def delete_group_by_name_handler(message: CallbackQuery,
-                                       user: Tuple[int, Union[str, None]] = Depends(check_telegram_profile_message)) \
-        -> None:
-    if user[1] is not None:
-        await message.message.answer(user[1])
-        return
+async def delete_group_by_name_handler(message: CallbackQuery) -> None:
     name_group = str(message.data).replace('delete_group_', '')
     try:
-        await delete_group_by_name(name_group=name_group, profile_id=user[0])
+        await delete_group_by_name(name_group=name_group, profile_id=message.from_user.id)
         answer = f'Группа {name_group} удалена'
     except Exception as ex:
         logger.error(ex)

@@ -32,7 +32,7 @@ async def check_telegram_profile_message(message: Union[Message, CallbackQuery, 
             await session.commit()
         except Exception as ex:
             logging.error(ex)
-            error = str(ex)
+            error = f'An error has occurred. Try later...'
     else:
         if user.is_block is True:
             error = f'User by profile_id -> {user.id} and username -> {user.username} is block!'

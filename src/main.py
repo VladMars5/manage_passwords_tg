@@ -17,6 +17,8 @@ async def main():
     dp.include_router(router_password)
     dp.include_router(router_other)
     bot = Bot(TOKEN_BOT)
+    # Запускаем бота и пропускаем все накопленные входящие
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot, skip_updates=True)
 
 

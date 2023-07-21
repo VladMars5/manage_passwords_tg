@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Table, Identity, ForeignKey
+from sqlalchemy import Column, String, Table, Identity, ForeignKey, BigInteger
 from pydantic import BaseModel, validator
 
 from database.database import metadata
@@ -6,11 +6,11 @@ from database.database import metadata
 password = Table(
     "password",
     metadata,
-    Column("id", Integer, Identity(), nullable=False, unique=True),
+    Column("id", BigInteger, Identity(), nullable=False, unique=True),
     Column("service_name", String(length=512), nullable=False, primary_key=True),
     Column("encrypt_login", String(length=1024), nullable=False, primary_key=True),
     Column("encrypt_password", String(length=2048), nullable=False),
-    Column("group_id", Integer, ForeignKey('group.id', ondelete='CASCADE'), nullable=False, primary_key=True)
+    Column("group_id", BigInteger, ForeignKey('group.id', ondelete='CASCADE'), nullable=False, primary_key=True)
 )
 
 
